@@ -6,6 +6,16 @@ All notable changes to this project will be documented in this file.
 
 ### Features
 
+- **Add SDK changelog automation with release notes generation (closes #385)**
+  - `commitlint` + Husky `commit-msg` hook enforces conventional commit format
+  - Allowed types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `chore`, `breaking`
+  - `release-it` + `@release-it/conventional-changelog` configured for semver bumping
+  - `CHANGELOG.md` auto-generated on `npm run release` — grouped by `feat`, `fix`, `perf`, `breaking`
+  - `BREAKING CHANGE:` footer auto-populates breaking changes section
+  - GitHub Release created automatically with release notes
+  - `npm publish` runs as part of the release flow; dry-run via `npm run release:dry`
+  - Setup instructions added to `CONTRIBUTING.md`
+
 - **Build invoice diff utility — compare two invoice states (closes #363)**
   - `diffInvoices(a: Invoice, b: Invoice)` returns structured diff of two invoice objects
   - Returns `InvoiceDiff` as `{ field: string, before: unknown, after: unknown }[]` — only changed fields listed
