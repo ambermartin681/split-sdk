@@ -1,5 +1,15 @@
+import { RateLimitQueueFullError } from "./errors.js";
+
 export interface RateLimiterConfig {
   maxRequestsPerSecond: number;
+  /** Maximum number of requests that can queue while waiting for a token. Default: 50. */
+  queueCap?: number;
+}
+
+export interface RateLimitStats {
+  tokensAvailable: number;
+  queuedRequests: number;
+  totalThrottled: number;
 }
 
 export class RateLimiter {
@@ -9,12 +19,15 @@ export class RateLimiter {
   private _lastRefillTime: number;
   private _queue: Array<() => void> = [];
   private _processing = false;
+  private _queueCap: number;
+  private _totalThrottled = 0;
 
   constructor(config: RateLimiterConfig) {
     this._maxTokens = config.maxRequestsPerSecond;
     this._tokens = this._maxTokens;
     this._refillIntervalMs = 1000;
     this._lastRefillTime = Date.now();
+    this._queueCap = config.queueCap ?? 50;
   }
 
   private _refill(): void {
@@ -36,12 +49,24 @@ export class RateLimiter {
       this._tokens--;
       return Promise.resolve();
     }
+    if (this._queue.length >= this._queueCap) {
+      throw new RateLimitQueueFullError(this._queueCap);
+    }
+    this._totalThrottled++;
     return new Promise<void>((resolve) => {
       this._queue.push(resolve);
       if (!this._processing) {
         this._processQueue();
       }
     });
+  }
+
+  getRateLimitStats(): RateLimitStats {
+    return {
+      tokensAvailable: this._tokens,
+      queuedRequests: this._queue.length,
+      totalThrottled: this._totalThrottled,
+    };
   }
 
   private _processQueue(): void {

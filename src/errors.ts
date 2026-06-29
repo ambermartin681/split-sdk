@@ -1047,3 +1047,20 @@ export class TooManySubscriptionsError extends StellarSplitError {
 export function isTooManySubscriptionsError(err: unknown): err is TooManySubscriptionsError {
   return err instanceof TooManySubscriptionsError;
 }
+
+/** Thrown when the rate-limiter queue is full (50 pending requests). */
+export class RateLimitQueueFullError extends StellarSplitError {
+  constructor(queueCap: number = 50) {
+    super(
+      `Rate limit queue is full (${queueCap} pending requests). Try again later or disable rate limiting for this call.`,
+      "RATE_LIMIT_QUEUE_FULL",
+      { queueCap }
+    );
+    this.name = "RateLimitQueueFullError";
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export function isRateLimitQueueFullError(err: unknown): err is RateLimitQueueFullError {
+  return err instanceof RateLimitQueueFullError;
+}

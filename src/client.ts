@@ -292,6 +292,17 @@ export interface StellarSplitClientConfig {
    * selector. Use one or the other, not both.
    */
   rpcPoolSize?: number;
+  /**
+   * Optional client-side rate limiting using a token-bucket algorithm.
+   * Disabled by default — opt-in to prevent 429 errors from RPC providers.
+   * Queue is capped at 50 pending requests; excess throws `RateLimitQueueFullError`.
+   *
+   * @example
+   * ```ts
+   * new StellarSplitClient({ rateLimit: { requestsPerSecond: 10 } })
+   * ```
+   */
+  rateLimit?: { requestsPerSecond: number };
 }
 
 /** Network configuration. */
@@ -560,6 +571,10 @@ export class StellarSplitClient {
       this._idempotency = new IdempotencyManager(config.idempotency);
     }
 
+    if (config.rateLimit) {
+      this._rateLimiter = new RateLimiter({ maxRequestsPerSecond: config.rateLimit.requestsPerSecond });
+    }
+
     initHealthDashboard(this.server, this._dedup);
 
     // Register and initialize config-level plugins
@@ -615,6 +630,14 @@ export class StellarSplitClient {
       return (this._cache as any).getStats();
     }
     return null;
+  }
+
+  /**
+   * Returns rate limiter statistics for observability.
+   * Returns null if rate limiting is disabled.
+   */
+  public getRateLimitStats(): import("./rateLimiter.js").RateLimitStats | null {
+    return this._rateLimiter ? this._rateLimiter.getRateLimitStats() : null;
   }
 
   private _logAudit(method: string, params: Record<string, unknown>, success: boolean, durationMs: number): void {
@@ -1174,12 +1197,13 @@ export class StellarSplitClient {
    */
   async getInvoice(
     invoiceId: string,
-    opts?: { retry?: PerMethodRetryOptions }
+    opts?: { retry?: PerMethodRetryOptions; rateLimit?: boolean }
   ): Promise<Invoice> {
     return this._withCache("getInvoice", [invoiceId], async () => {
+      const rateLimitOpt = opts?.rateLimit;
       const fetcher = this._batcher
         ? () => this._batcher!.getInvoice(invoiceId)
-        : () => this._fetchInvoice(invoiceId);
+        : () => this._fetchInvoice(invoiceId, { rateLimit: rateLimitOpt });
 
       const effectiveRetry = opts?.retry ?? (this._retryOptions ? {} : undefined);
       if (this._retryOptions && effectiveRetry !== undefined) {
@@ -1193,7 +1217,10 @@ export class StellarSplitClient {
     });
   }
 
-  private async _fetchInvoice(invoiceId: string): Promise<Invoice> {
+  private async _fetchInvoice(invoiceId: string, opts?: { rateLimit?: boolean }): Promise<Invoice> {
+    if (opts?.rateLimit !== false) {
+      await this._rateLimiter?.acquire();
+    }
     const startTime = Date.now();
     const req = { method: "getInvoice", params: [invoiceId] };
     await runRequestInterceptors(req);
@@ -3370,7 +3397,10 @@ export class StellarSplitClient {
   }
 
   /** Simulate a read-only contract call and return the native-decoded result. */
-  private async _simulateView(operation: xdr.Operation): Promise<unknown> {
+  private async _simulateView(operation: xdr.Operation, opts?: { rateLimit?: boolean }): Promise<unknown> {
+    if (opts?.rateLimit !== false) {
+      await this._rateLimiter?.acquire();
+    }
     const account = await this.server.getAccount(this.config.contractId).catch(() => null);
     const sourceAccount = account ?? new Account(this.config.contractId, "0");
 
