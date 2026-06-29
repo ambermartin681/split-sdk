@@ -59,6 +59,45 @@ feat: add retry logic to _submitTx (#7)
 - No `any` types unless absolutely necessary — document why.
 - Keep functions small and focused.
 
+## Commit Message Format
+
+Commits must follow [Conventional Commits](https://www.conventionalcommits.org/) — enforced by `commitlint` via a Husky `commit-msg` hook.
+
+Allowed types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `chore`, `breaking`
+
+```
+feat: add invoice template caching (#42)
+fix: handle undefined return from freighter signTransaction (#7)
+perf: deduplicate concurrent getInvoice calls (#386)
+
+BREAKING CHANGE: removed deprecated `pay()` options.dedupe field
+```
+
+Breaking changes must include a `BREAKING CHANGE:` footer — these auto-populate the breaking changes section in `CHANGELOG.md`.
+
+## Releases & Changelog
+
+`CHANGELOG.md` is auto-generated from conventional commits on every release. To cut a release:
+
+### Setup (first time)
+
+```bash
+npm install     # installs husky, commitlint, release-it
+npm run prepare # activates Husky hooks
+```
+
+### Create a release
+
+```bash
+npm run release       # interactive: bumps version, generates CHANGELOG.md, creates GitHub Release, publishes to npm
+npm run release:dry   # dry run — shows what would happen without making changes
+```
+
+`release-it` uses commit types to determine the semver bump:
+- `feat` → minor bump
+- `fix` / `perf` → patch bump
+- `BREAKING CHANGE` footer → major bump
+
 ## Questions?
 
 Open a [Discussion](../../discussions) or ask in the issue thread.
