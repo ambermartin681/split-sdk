@@ -3635,6 +3635,23 @@ export class StellarSplitClient {
   }
 
   /**
+   * Fetch extended metadata for an invoice (parent ID and clone depth).
+   * @param invoiceId - The invoice ID to query.
+   */
+  async getInvoiceExt(invoiceId: string): Promise<InvoiceExt> {
+    return this._getInvoiceExt(invoiceId);
+  }
+
+  /**
+   * Fetch the full payment history for an invoice.
+   * Alias for {@link getPaymentHistory}.
+   * @param invoiceId - The invoice ID to query.
+   */
+  async getInvoiceHistory(invoiceId: string): Promise<import("./types.js").Payment[]> {
+    return this.getPaymentHistory(invoiceId);
+  }
+
+  /**
    * Resolve the full clone chain for an invoice.
    *
    * Recursively fetches parent invoices via `parentInvoiceId` from

@@ -1,0 +1,51 @@
+name: Snapshot diff
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "test/snapshots/**"
+
+jobs:
+  snapshot-check:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run snapshot tests
+        id: snapshots
+        run: |
+          npx vitest run test/snapshots/sdk.snapshot.test.ts --reporter=json 2>&1 | tee snapshot-result.json || true
+
+      - name: Check for snapshot divergence
+        run: |
+          npx vitest run test/snapshots/sdk.snapshot.test.ts 2>&1
+        # Fails CI if any snapshot diverges without an update commit
+
+      - name: Post snapshot diff as PR comment
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## Snapshot divergence detected\n\n';
+            body += 'One or more SDK response snapshots have changed. ';
+            body += 'If this is intentional, update snapshots by running:\n\n';
+            body += '```bash\nnpx vitest run --update-snapshots test/snapshots/sdk.snapshot.test.ts\n```\n\n';
+            body += 'Then commit the updated snapshot files in `test/snapshots/__snapshots__/`.\n';
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body,
+            });

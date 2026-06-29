@@ -59,6 +59,28 @@ feat: add retry logic to _submitTx (#7)
 - No `any` types unless absolutely necessary — document why.
 - Keep functions small and focused.
 
+## Snapshot Tests
+
+SDK read-method response shapes are locked via Vitest snapshots stored in `test/snapshots/__snapshots__/`. Any change to these shapes will fail CI with a diff.
+
+### Running snapshot tests
+
+```bash
+npx vitest run test/snapshots/sdk.snapshot.test.ts
+```
+
+### Updating snapshots
+
+When you intentionally change an SDK response shape, regenerate the snapshots and commit the updated files:
+
+```bash
+npx vitest run --update-snapshots test/snapshots/sdk.snapshot.test.ts
+git add test/snapshots/__snapshots__/
+git commit -m "chore: update SDK response snapshots"
+```
+
+A GitHub Actions workflow posts a comment on PRs when snapshots diverge without an update commit.
+
 ## Questions?
 
 Open a [Discussion](../../discussions) or ask in the issue thread.
