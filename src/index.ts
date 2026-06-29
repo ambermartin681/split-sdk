@@ -146,6 +146,8 @@ export {
   isChannelReconciliationError,
   TooManySubscriptionsError,
   isTooManySubscriptionsError,
+  RateLimitQueueFullError,
+  isRateLimitQueueFullError,
 } from "./errors.js";
 export { getScheduledReleaseCountdown } from "./client.js";
 export { verifyCompletionProof } from "./client.js";
